@@ -39,7 +39,7 @@ define([
         }
         //>>includeEnd('debug');
 
-        return ComposerApi.defaultKey;
+        return ComposerApi.defaultToken;
     };
 
     return ComposerApi;

@@ -1,5 +1,7 @@
 define([
         'Cesium/Core/Cartesian3',
+        'Cesium/Core/ComposerApi',
+        'Cesium/Scene/createComposerAsset',
         'Cesium/Core/defined',
         'Cesium/Core/formatError',
         'Cesium/Core/Math',
@@ -15,6 +17,8 @@ define([
         'domReady!'
     ], function(
         Cartesian3,
+        ComposerApi,
+        createComposerAsset,
         defined,
         formatError,
         CesiumMath,
@@ -28,6 +32,8 @@ define([
         viewerCesiumInspectorMixin,
         viewerDragDropMixin) {
     'use strict';
+
+    ComposerApi.defaultToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIyYmU0MWNkMS04ZGI5LTRiMGEtYjBhMC03MTk1MmJmYjAwNzAiLCJpZCI6MiwiaWF0IjoxNTEwMjM1NTMxfQ.N69LG_elvNsbu3pz_yGBc-fZYdvR_j-TifXPLspBQtE';
 
     /*
      * 'debug'  : true/false,   // Full WebGL error reporting at substantial performance cost.
@@ -54,8 +60,8 @@ define([
     try {
         viewer = new Viewer('cesiumContainer', {
             imageryProvider : imageryProvider,
-            baseLayerPicker : !defined(imageryProvider),
-            scene3DOnly : endUserOptions.scene3DOnly
+            baseLayerPicker : false,
+            terrainProvider: createComposerAsset(1)
         });
     } catch (exception) {
         loadingIndicator.style.display = 'none';

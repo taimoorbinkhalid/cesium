@@ -37,7 +37,7 @@ define([
         //>>includeEnd('debug');
 
         token = ComposerApi.getToken(token);
-        return loadJson('//api.composer.dev:8081/api/assets/' + assetId + '?access_token=' + token)
+        return loadJson('//api.composer.dev:8081/api/assets/' + assetId + '/endpoint?access_token=' + token)
             .then(function(metadata) {
                 var type = metadata.type;
                 metadata.url = metadata.url + '?access_token=' + token;
@@ -80,10 +80,10 @@ define([
                     });
                 } else if (type === ComposerAssetType.IMAGERY) {
                     if (!metadata.isExternal) {
-                        return createTileMapServiceImageryProvider(metadata);
+                        return createTileMapServiceImageryProvider({ url: metadata.url + '?access_token=' + metadata.access_token });
                     }
                     return ComposerExternalImageryType.getProvider(metadata.externalConfiguration);
-                } else if (type === ComposerAssetType.TERRAIN) {
+                } else if (type === ComposerAssetType.TERRAIN || type === 'STK_TERRAIN_SERVER') {
                     return new CesiumTerrainProvider({
                         url : metadata.isExternal ? metadata.externalConfiguration.url : metadata.url,
                         requestWaterMask : true,
