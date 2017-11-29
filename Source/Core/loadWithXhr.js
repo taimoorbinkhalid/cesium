@@ -1,7 +1,6 @@
 define([
         '../ThirdParty/when',
         './Check',
-        './clone',
         './defaultValue',
         './defined',
         './DeveloperError',
@@ -13,7 +12,6 @@ define([
     ], function(
         when,
         Check,
-        clone,
         defaultValue,
         defined,
         DeveloperError,
@@ -74,7 +72,8 @@ define([
         request.url = url;
         request.requestFunction = function() {
             var deferred = when.defer();
-            var xhr = loadWithXhr.load(clone(options), deferred);
+            var requestOptions = defaultValue(options.requestOptions, defaultValue.EMPTY_OBJECT);
+            var xhr = loadWithXhr.load(options, deferred, requestOptions, requestOptions.retryAttempts);
             if (defined(xhr) && defined(xhr.abort)) {
                 request.cancelFunction = function() {
                     xhr.abort();
@@ -136,8 +135,7 @@ define([
     }
 
     // This is broken out into a separate function so that it can be mocked for testing purposes.
-    loadWithXhr.load = function(options, deferred) {
-        var requestOptions = defaultValue(options.requestOptions, defaultValue.EMPTY_OBJECT);
+    loadWithXhr.load = function(options, deferred, requestOptions, retryAttempts) {
         var retryOnError = requestOptions.retryOnError;
         var beforeRequest = requestOptions.beforeRequest;
 
@@ -194,8 +192,8 @@ define([
                     when.resolve(retryOnError())
                         .then(function(retry) {
                             if (retry) {
-                                requestOptions.retryAttempts--;
-                                loadWithXhr.load(options, deferred);
+                                retryAttempts--;
+                                loadWithXhr.load(options, deferred, requestOptions, retryAttempts);
                             } else {
                                 deferred.reject(new RequestErrorEvent(xhr.status, xhr.response, xhr.getAllResponseHeaders()));
                             }

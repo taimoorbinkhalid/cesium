@@ -84,12 +84,7 @@ define([
                         var requestOptions = {
                             retryAttempts: 1
                         };
-                        requestOptions.beforeRequest =function(url, retry) {
-                            if (url.indexOf('.xml') !== -1) {
-                                return url + '?access_token=' + assetToken;
-                            } else if (retry) {
-                                return url + '?access_token=123' + assetToken;
-                            }
+                        requestOptions.beforeRequest =function(url) {
                             return url + '?access_token=' + assetToken;
                         };
                         requestOptions.retryOnError = function() {

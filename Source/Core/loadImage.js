@@ -88,7 +88,7 @@ define([
         var beforeRequest = requestOptions.beforeRequest;
         var baseUrl = url;
         if (typeof beforeRequest === 'function') {
-            url = beforeRequest(url, retryAttempts !== 0);
+            url = beforeRequest(url);
         }
 
         image.onload = function() {
