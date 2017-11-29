@@ -46,7 +46,7 @@ define([
      *
      * @see {@link http://wiki.commonjs.org/wiki/Promises/A|CommonJS Promises/A}
      */
-    function loadJsonp(url, options, request) {
+    function loadJsonp(url, options, request, requestOptions) {
         //>>includeStart('debug', pragmas.debug);
         if (!defined(url)) {
             throw new DeveloperError('url is required.');
@@ -97,7 +97,7 @@ define([
                 }
             };
 
-            loadJsonp.loadAndExecuteScript(url, functionName, deferred);
+            loadJsonp.loadAndExecuteScript(url, functionName, deferred, requestOptions);
             return deferred.promise;
         };
 
@@ -105,7 +105,7 @@ define([
     }
 
     // This is broken out into a separate function so that it can be mocked for testing purposes.
-    loadJsonp.loadAndExecuteScript = function(url, functionName, deferred) {
+    loadJsonp.loadAndExecuteScript = function(url, functionName, deferred, requestOptions) {
         var script = document.createElement('script');
         script.async = true;
         script.src = url;
@@ -116,6 +116,7 @@ define([
             head.removeChild(script);
         };
         script.onerror = function(e) {
+            //TODO
             deferred.reject(e);
         };
 

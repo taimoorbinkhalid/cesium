@@ -1,6 +1,7 @@
 define([
         '../ThirdParty/when',
         './Check',
+        './clone',
         './defaultValue',
         './defined',
         './DeveloperError',
@@ -12,6 +13,7 @@ define([
     ], function(
         when,
         Check,
+        clone,
         defaultValue,
         defined,
         DeveloperError,
@@ -68,18 +70,11 @@ define([
 
         var url = options.url;
 
-        var responseType = options.responseType;
-        var method = defaultValue(options.method, 'GET');
-        var data = options.data;
-        var headers = options.headers;
-        var overrideMimeType = options.overrideMimeType;
-        url = defaultValue(url, options.url);
-
         var request = defined(options.request) ? options.request : new Request();
         request.url = url;
         request.requestFunction = function() {
             var deferred = when.defer();
-            var xhr = loadWithXhr.load(url, responseType, method, data, headers, deferred, overrideMimeType);
+            var xhr = loadWithXhr.load(clone(options), deferred);
             if (defined(xhr) && defined(xhr.abort)) {
                 request.cancelFunction = function() {
                     xhr.abort();
@@ -141,7 +136,22 @@ define([
     }
 
     // This is broken out into a separate function so that it can be mocked for testing purposes.
-    loadWithXhr.load = function(url, responseType, method, data, headers, deferred, overrideMimeType) {
+    loadWithXhr.load = function(options, deferred) {
+        var requestOptions = defaultValue(options.requestOptions, defaultValue.EMPTY_OBJECT);
+        var retryOnError = requestOptions.retryOnError;
+        var beforeRequest = requestOptions.beforeRequest;
+
+        var url = options.url;
+        if (typeof beforeRequest === 'function') {
+            url = beforeRequest(url);
+        }
+
+        var responseType = options.responseType;
+        var method = defaultValue(options.method, 'GET');
+        var data = options.data;
+        var headers = options.headers;
+        var overrideMimeType = options.overrideMimeType;
+
         var dataUriRegexResult = dataUriRegex.exec(url);
         if (dataUriRegexResult !== null) {
             deferred.resolve(decodeDataUri(dataUriRegexResult, responseType));
@@ -180,6 +190,20 @@ define([
 
         xhr.onload = function() {
             if ((xhr.status < 200 || xhr.status >= 300) && !(localFile && xhr.status === 0)) {
+                if (typeof retryOnError === 'function' && requestOptions.retryAttempts > 0) {
+                    when.resolve(retryOnError())
+                        .then(function(retry) {
+                            if (retry) {
+                                requestOptions.retryAttempts--;
+                                loadWithXhr.load(options, deferred);
+                            } else {
+                                deferred.reject(new RequestErrorEvent(xhr.status, xhr.response, xhr.getAllResponseHeaders()));
+                            }
+                        })
+                        .otherwise(function() {
+                            deferred.reject(new RequestErrorEvent(xhr.status, xhr.response, xhr.getAllResponseHeaders()));
+                        });
+                }
                 deferred.reject(new RequestErrorEvent(xhr.status, xhr.response, xhr.getAllResponseHeaders()));
                 return;
             }

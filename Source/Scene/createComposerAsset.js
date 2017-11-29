@@ -4,6 +4,7 @@ define([
     './ComposerExternalImageryType',
     './Cesium3DTileset',
     '../Core/loadJson',
+    '../Core/buildModuleUrl',
     '../Core/Check',
     '../Core/ComposerApi',
     '../Core/CesiumTerrainProvider',
@@ -16,6 +17,7 @@ define([
     ComposerExternalImageryType,
     Cesium3DTileset,
     loadJson,
+    buildModuleUrl,
     Check,
     ComposerApi,
     CesiumTerrainProvider,
@@ -35,12 +37,11 @@ define([
         //>>includeStart('debug', pragmas.debug);
         Check.defined('assetId', assetId);
         //>>includeEnd('debug');
-
         token = ComposerApi.getToken(token);
         return loadJson('//api.composer.dev:8081/api/assets/' + assetId + '/endpoint?access_token=' + token)
             .then(function(metadata) {
                 var type = metadata.type;
-                metadata.url = metadata.url + '?access_token=' + token;
+                var assetToken = metadata.access_token;
                 if (type === ComposerAssetType.MODEL) {
                     return new Entity({
                         name : metadata.name,
@@ -80,7 +81,31 @@ define([
                     });
                 } else if (type === ComposerAssetType.IMAGERY) {
                     if (!metadata.isExternal) {
-                        return createTileMapServiceImageryProvider({ url: metadata.url + '?access_token=' + metadata.access_token });
+                        var requestOptions = {
+                            retryAttempts: 1
+                        };
+                        requestOptions.beforeRequest =function(url, retry) {
+                            if (url.indexOf('.xml') !== -1) {
+                                return url + '?access_token=' + assetToken;
+                            } else if (retry) {
+                                return url + '?access_token=123' + assetToken;
+                            }
+                            return url + '?access_token=' + assetToken;
+                        };
+                        requestOptions.retryOnError = function() {
+                            return loadJson('//api.composer.dev:8081/api/assets/' + assetId + '/endpoint?access_token=' + assetToken)
+                                .then(function(metadata) {
+                                    assetToken = metadata.access_token;
+                                    return true;
+                                })
+                                .otherwise(function() {
+                                    return false;
+                                });
+                        };
+                        return createTileMapServiceImageryProvider({
+                            url : metadata.url,
+                            requestOptions : requestOptions
+                        });
                     }
                     return ComposerExternalImageryType.getProvider(metadata.externalConfiguration);
                 } else if (type === ComposerAssetType.TERRAIN || type === 'STK_TERRAIN_SERVER') {
